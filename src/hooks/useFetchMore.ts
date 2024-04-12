@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { type Params, getSearchParams } from '../utils/getSearchParams';
 import { fetcher } from '../utils/fetcher';
 
-type FetchMore<T, Params> = (
+type FetchMore<T> = (
   variables: Params,
   updateQuery: (data: T, incomingData: T) => T
 ) => Promise<void>;
@@ -36,7 +36,7 @@ const useFetchMore = <T>(path: string) => {
     }
   };
 
-  const fetchMore: FetchMore<T, Params> = async (variables, updateQuery) => {
+  const fetchMore: FetchMore<T> = async (variables, updateQuery) => {
     try {
       const searchParams = getSearchParams(variables);
       const incomingData = await fetcher(path, searchParams);
