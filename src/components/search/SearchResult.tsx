@@ -25,12 +25,8 @@ const SearchResult = () => {
     firstFetch,
     fetchMore,
     loading,
-    error,
   } = useFetchMore<ProductResponse>(API_PATHS.SEARCH);
 
-  if (error) {
-    throw error;
-  }
   const handleFetchMore = () => {
     if (!searchResult) return;
     const variables = {
