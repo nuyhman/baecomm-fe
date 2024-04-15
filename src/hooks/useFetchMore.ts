@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { type Params, getSearchParams } from '../utils/getSearchParams';
 import { fetcher } from '../utils/fetcher';
 
+type FetchMoreOptions<T> = {
+  checkHasMore?: (data: T) => boolean;
+};
+
 type FetchMore<T> = (
   variables: Params,
   updateQuery: (data: T, incomingData: T) => T
@@ -10,23 +14,31 @@ type FetchMore<T> = (
 /**
  * 페이지네이션을 위한 커스텀 훅
  * @param path
+ * @param options - optional
  * @returns
  */
-const useFetchMore = <T>(path: string) => {
+const useFetchMore = <T>(path: string, options?: FetchMoreOptions<T>) => {
   const [data, setData] = useState<T>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  const checkHasMore = (data: T) => {
+    if (options?.checkHasMore == null) return;
+    setHasMore(options.checkHasMore(data));
+  };
 
   const firstFetch = async (params: Params, restoredData?: T) => {
     try {
       if (restoredData) {
         setData(restoredData);
-        return restoredData;
+        checkHasMore(restoredData);
+        return;
       }
       const searchParams = getSearchParams(params);
       const data = await fetcher(path, searchParams);
       setData(data);
-      return data;
+      checkHasMore(data);
     } catch (error) {
       if (error instanceof Error) {
         setError(error);
@@ -40,7 +52,11 @@ const useFetchMore = <T>(path: string) => {
     try {
       const searchParams = getSearchParams(variables);
       const incomingData = await fetcher(path, searchParams);
-      setData(existingData => updateQuery(existingData as T, incomingData));
+      setData(existingData => {
+        const updateData = updateQuery(existingData as T, incomingData);
+        checkHasMore(updateData);
+        return updateData;
+      });
     } catch (error) {
       if (error instanceof Error) {
         console.error('Error fetching more data:', error);
@@ -55,6 +71,7 @@ const useFetchMore = <T>(path: string) => {
     error,
     firstFetch,
     fetchMore,
+    hasMore,
   };
 };
 
