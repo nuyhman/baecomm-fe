@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { searchResultCss } from './search.emotion';
 import useScrollRestoration from '../../hooks/useScrollRestoration';
@@ -12,7 +12,6 @@ import { ProductItem } from '../product';
 
 const SearchResult = () => {
   const location = useLocation();
-  const [hasNextPage, setHasNextPage] = useState(false);
   const { saveRestoreData, getRestoreData, restore } = useScrollRestoration(
     'scroll-restoration-product'
   );
@@ -25,7 +24,10 @@ const SearchResult = () => {
     firstFetch,
     fetchMore,
     loading,
-  } = useFetchMore<ProductResponse>(API_PATHS.SEARCH);
+    hasMore: hasMoreList,
+  } = useFetchMore<ProductResponse>(API_PATHS.SEARCH, {
+    checkHasMore: data => data?.total > data.products.length,
+  });
 
   const handleFetchMore = () => {
     if (!searchResult) return;
@@ -35,24 +37,16 @@ const SearchResult = () => {
       limit: '10',
     };
 
-    fetchMore(variables, (exisingData, incomingData) => {
-      const _hasNextPage =
-        exisingData?.total >
-        exisingData?.products?.length + incomingData?.products?.length;
-      setHasNextPage(_hasNextPage);
+    fetchMore(variables, (existingData, incomingData) => {
       return {
         ...incomingData,
-        products: [...exisingData?.products, ...incomingData.products],
+        products: [...existingData?.products, ...incomingData.products],
       };
     });
   };
 
   const handleProductClick = () => {
     saveRestoreData({ data: searchResult, scrollY: window.scrollY });
-  };
-
-  const checkHasNextPage = (data: ProductResponse) => {
-    setHasNextPage(data?.total > data?.products.length);
   };
 
   /**
@@ -70,12 +64,10 @@ const SearchResult = () => {
           limit: '10',
         };
         restore(() => firstFetch(params, data), scrollY);
-        checkHasNextPage(data);
         return;
       }
       const params = { q: query || '', skip: '0', limit: '10' };
-      const data = await firstFetch(params);
-      checkHasNextPage(data);
+      await firstFetch(params);
     };
 
     fetchData();
@@ -102,7 +94,7 @@ const SearchResult = () => {
         <p css={searchResultCss.noResult}>💬 검색 결과가 없습니다.</p>
       )}
 
-      {hasNextPage && (
+      {hasMoreList && (
         <button
           type='button'
           onClick={handleFetchMore}
